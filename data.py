@@ -1,4 +1,5 @@
 import tensorflow as tf
+import hparams
 
 import tensorflow_datasets as tfds
 from tensorflow_examples.models.pix2pix import pix2pix
@@ -17,7 +18,7 @@ def normalize(image):
 
 def random_crop(image):
     cropped_image = tf.image.random_crop(
-        image, size=[IMG_HEIGHT, IMG_WIDTH, 3])
+        image, size=[hparams.IMG_HEIGHT, hparams.IMG_WIDTH, 3])
 
     return cropped_image
 

@@ -68,7 +68,9 @@ if __name__ == "__main__":
                                           discriminator_x_optimizer,
                                           discriminator_y_optimizer)
 
+    print(f"Starting training for {hparams.EPOCHS} epochs")
     for epoch in range(hparams.EPOCHS):
+        print(f"Starting epoch {epoch}")
         start = time.time()
 
         n = 0
