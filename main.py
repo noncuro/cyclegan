@@ -8,10 +8,14 @@ import data
 import eval
 import hparams
 import train
+import wandb
 
 AUTOTUNE = tf.data.AUTOTUNE
 
 if __name__ == "__main__":
+    wandb.init(project="cyclegan-horse-zebra")
+    print("Num GPUs available: ", len(tf.config.list_physical_devices("GPU")))
+    # tf.debugging.set_log_device_placement(True)
 
     dataset, metadata = tfds.load('cycle_gan/horse2zebra',
                                   with_info=True, as_supervised=True)
@@ -30,7 +34,7 @@ if __name__ == "__main__":
 
     sample_horse = next(iter(train_horses))
     # Currently unused.
-    # sample_zebra = next(iter(train_zebras))
+    sample_zebra = next(iter(train_zebras))
 
     generator_g = pix2pix.unet_generator(hparams.OUTPUT_CHANNELS, norm_type='instancenorm')
     generator_f = pix2pix.unet_generator(hparams.OUTPUT_CHANNELS, norm_type='instancenorm')
@@ -69,20 +73,31 @@ if __name__ == "__main__":
                                           discriminator_y_optimizer)
 
     print(f"Starting training for {hparams.EPOCHS} epochs")
+    global_step = -1
     for epoch in range(hparams.EPOCHS):
         print(f"Starting epoch {epoch}")
         start = time.time()
 
+        writer = tf.summary.create_file_writer("./tmp/cyclegans/train")
         n = 0
-        for image_x, image_y in tf.data.Dataset.zip((train_horses, train_zebras)):
-            train_step(image_x, image_y)
-            if n % 10 == 0:
-                print('.', end='')
-            n += 1
+        with writer.as_default():
+            for image_x, image_y in tf.data.Dataset.zip((train_horses, train_zebras)):
+                global_step += 1
+                loss_dict = train_step(image_x, image_y)
+                wandb.log(loss_dict, step=global_step)
+                for loss_key, loss_val in loss_dict.items():
+                    tf.summary.scalar(loss_key, loss_val, step=global_step)
+                if n % 1 == 0:
+                    print('.', end='')
+                n += 1
 
         # Using a consistent image (sample_horse) so that the progress of the model
         # is clearly visible.
-        eval.generate_images(generator_g, sample_horse)
+        fake_zebra = eval.generate_images(generator_g, sample_horse)
+        fake_horse = eval.generate_images(generator_f, sample_zebra)
+
+        wandb.log({"fake_zebra":wandb.Image(fake_zebra),
+                   "fake_horse":wandb.Image(fake_horse)})
 
         if (epoch + 1) % 5 == 0:
             ckpt_save_path = ckpt_manager.save()

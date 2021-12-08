@@ -69,8 +69,10 @@ def make_training_step(generator_g,
             total_cycle_loss = calc_cycle_loss(real_x, cycled_x) + calc_cycle_loss(real_y, cycled_y)
 
             # Total generator loss = adversarial loss + cycle loss
-            total_gen_g_loss = gen_g_loss + total_cycle_loss + identity_loss(real_y, same_y)
-            total_gen_f_loss = gen_f_loss + total_cycle_loss + identity_loss(real_x, same_x)
+            identity_loss_y = identity_loss(real_y, same_y)
+            identity_loss_x = identity_loss(real_x, same_x)
+            total_gen_g_loss = gen_g_loss + total_cycle_loss + identity_loss_x
+            total_gen_f_loss = gen_f_loss + total_cycle_loss + identity_loss_y
 
             disc_x_loss = discriminator_loss(disc_real_x, disc_fake_x)
             disc_y_loss = discriminator_loss(disc_real_y, disc_fake_y)
@@ -98,5 +100,16 @@ def make_training_step(generator_g,
 
         discriminator_y_optimizer.apply_gradients(zip(discriminator_y_gradients,
                                                       discriminator_y.trainable_variables))
+        return {
+            "gen_g_loss": gen_g_loss,
+            "gen_f_loss": gen_f_loss,
+            "disc_x_loss": disc_x_loss,
+            "disc_y_loss": disc_y_loss,
+            "disc_fake_x": tf.reduce_mean(disc_fake_x),
+            "disc_fake_y": tf.reduce_mean(disc_fake_y),
+            "disc_real_x": tf.reduce_mean(disc_real_x),
+            "disc_real_y": tf.reduce_mean(disc_real_y),
+
+        }
 
     return train_step
